@@ -1,20 +1,25 @@
 # TCP to UDP SDN Southbound Protocol Modification
 
-**IIT Gandhinagar - Computer Networks Project**  
-**Team Size**: 4 members  
-**Duration**: 11 weeks  
-**Status**: Phase 1-2 Complete ✅
-
 ## Project Overview
 
 Modification of SDN southbound communication protocol from TCP to UDP for the Ryu controller and Open vSwitch (OVS) architecture. This project aims to reduce connection overhead and improve performance while maintaining reliable control plane communication.
 
 ### Objectives
 1. Analyze TCP-based OpenFlow communication performance (baseline)
-2. Design UDP-based protocol with selective reliability
-3. Implement UDP in Ryu controller and OVS
+2. Design UDP-based protocol in Ryu controller and OVS 
+3. Implement UDP with selective reliability
 4. Compare performance metrics (latency, throughput, overhead)
 5. Document findings and validate improvements
+
+---
+### Current Status:
+
+**Completed Work**:
+- ✅ Environment setup and TCP baseline implementation
+- ✅ Performance metrics collection (94,423 events captured)
+- ✅ Code architecture analysis and modification points identified
+
+**Key Achievement**: Validated UDP feasibility with 99.7% safety margin (max message size 218 bytes vs UDP's 65KB limit)
 
 ---
 
@@ -50,11 +55,10 @@ tcp_baseline/
 - 3 switches in linear configuration
 - 4 hosts (2 per edge switch)
 - Automatic ping traffic generation
-- Duration: 37.38 seconds
 
 ### 1.3 Performance Metrics Collected
 
-**Baseline Results** (Oct 31, 2025):
+**Baseline Results**:
 ```
 Duration:         37.38 seconds
 Total Messages:   94,423 (Packet-In events)
@@ -83,13 +87,16 @@ UDP Compatible:    ✅ YES (no fragmentation needed)
 - `data/tcp_baseline_metrics.json` (7.1 MB) - Raw performance data with 94,423 events
 - `data/tcp_baseline.pcap` (46 KB) - Network packet capture
 - `data/tcp_baseline.log` (60 MB) - Detailed controller logs
-- `results/tcp_baseline_performance.png` (379 KB) - 3-panel visualization
+- `results/tcp_baseline_performance.png` (379 KB) - 4-panel visualization
 - `results/tcp_baseline_report.txt` - Performance summary
 
-**Visualization**: Single comprehensive plot with:
-1. **Latency CDF** - Distribution showing mean and P95
-2. **Throughput Over Time** - 1-second window analysis
-3. **Message Sizes vs UDP Limit** - Box plots with safety margin
+**Visualization**: Comprehensive 4-panel performance analysis:
+1. **Throughput Over Time** - Message rate per second with peak detection
+2. **Average Latency Comparison** - Simple bar chart comparing message types
+3. **Message Sizes vs UDP Limit** - Box plots validating UDP compatibility
+4. **Protocol Overhead Breakdown** - TCP header overhead analysis (54 bytes/msg)
+
+![TCP Baseline Performance](tcp_baseline/results/tcp_baseline_performance.png)
 
 ---
 
@@ -170,19 +177,19 @@ ofproto/connmgr.c:
 
 ### 2.4 Modification Points Identified
 
-**Tier 1 - Critical** (Phase 3):
+**Tier 1 - Critical** (Future Phase 3):
 1. Replace StreamServer with DatagramServer in Ryu
 2. Add UDP socket creation and binding
 3. Implement message framing for UDP datagrams
 4. Add sequence numbers to OpenFlow messages
 
-**Tier 2 - Important** (Phase 4):
+**Tier 2 - Important** (Future Phase 4):
 1. Implement selective ACK mechanism
 2. Add retransmission logic for control messages
 3. Modify OVS to use UDP sockets
 4. Update connection state machines
 
-**Tier 3 - Optimization** (Phase 5-6):
+**Tier 3 - Optimization** (Future Phases):
 1. Tune retransmission timeouts
 2. Implement congestion control
 3. Add performance profiling
@@ -190,51 +197,50 @@ ofproto/connmgr.c:
 
 ---
 
-## Technical Specifications
+## Key Findings (Phase 1-2)
 
-### Network Architecture
-```
-Controller (Ryu)
-      |
-   OpenFlow
-   Protocol
-      |
-  +--+--+--+
-  |  |  |  |
- SW1 SW2 SW3  (Open vSwitch)
-  |     |
- H1-H2 H3-H4  (Hosts)
-```
+### ✅ Achievements
 
-### Protocol Stack Comparison
+1. **TCP Baseline Established**
+   - 94,423 events captured over 37.38 seconds
+   - Mean latency: 1.973 ms (stable performance)
+   - Throughput: 2,526 msg/sec sustained
 
-**Current (TCP)**:
-```
-OpenFlow Messages
-       ↓
-   TCP (Stream)
-       ↓
-    IP Layer
-       ↓
-  Ethernet
-```
-- **Overhead**: 54 bytes/message (TCP:20 + IP:20 + Eth:14)
-- **Connection**: 3-way handshake required
-- **Reliability**: Guaranteed in-order delivery
+2. **UDP Compatibility Validated**
+   - Max message size: 218 bytes
+   - UDP limit: 65,507 bytes
+   - **99.7% safety margin** - No fragmentation concerns
 
-**Target (UDP)**:
-```
-OpenFlow Messages
-       ↓
-UDP (Datagram) + Selective ACK
-       ↓
-    IP Layer
-       ↓
-  Ethernet
-```
-- **Overhead**: 42 bytes/message (UDP:8 + IP:20 + Eth:14) - **22% reduction**
-- **Connection**: Connectionless (no handshake)
-- **Reliability**: Application-layer for critical messages only
+3. **Architecture Mapped**
+   - 8 critical modification points identified in Ryu
+   - OVS modification scope defined
+   - Selective reliability strategy designed
+
+4. **Instrumentation Complete**
+   - Tracks 9 OpenFlow message types
+   - Measures latency, throughput, sizes
+   - Automated visualization pipeline
+
+### Performance Baseline Summary
+
+| Metric | Value | Notes |
+|--------|-------|-------|
+| **Test Duration** | 37.38 sec | Automated traffic generation |
+| **Total Events** | 94,423 | Packet-In messages |
+| **Throughput** | 2,526 msg/sec | Sustained rate |
+| **Mean Latency** | 1.973 ms | Controller processing time |
+| **Median Latency** | 1.133 ms | P50 value |
+| **P95 Latency** | 8.805 ms | 95th percentile |
+| **P99 Latency** | 8.898 ms | 99th percentile |
+| **Max Message Size** | 218 bytes | Well within UDP limit |
+| **Protocol Overhead** | 54 bytes/msg | TCP+IP+Ethernet headers |
+
+**Expected UDP Improvements** (for future phases):
+- Overhead reduction: 54B → 42B (**22% reduction**)
+- Connection time: 3-way handshake → 0 (**eliminated**)
+- Latency improvement: ~10-15% expected (no TCP retransmissions)
+
+---
 
 ---
 
@@ -259,10 +265,9 @@ CN_PR/
 │   ├── results/                       # Generated outputs
 │   │   ├── tcp_baseline_performance.png
 │   │   └── tcp_baseline_report.txt
-│   ├── topology/                      # Mininet topologies
-│   │   ├── test_topology_tcp.py
-│   │   └── basic_topo.py
-│   └── README.md                      # Quick reference
+│   └── topology/                      # Mininet topologies
+│       ├── test_topology_tcp.py
+│       └── basic_topo.py
 └── ryu/                               # Ryu controller source (for modification in Phase 3)
     ├── controller/                    # Core controller logic
     ├── ofproto/                       # OpenFlow protocol implementation
@@ -307,61 +312,6 @@ xdg-open tcp_baseline/results/tcp_baseline_performance.png
 # Analyze packet capture
 tcpdump -r tcp_baseline/data/tcp_baseline.pcap -nn | head -20
 ```
-
----
-
-## Key Findings (Phase 1-2)
-
-### ✅ Achievements
-
-1. **TCP Baseline Established**
-   - 94,423 events captured over 37.38 seconds
-   - Mean latency: 1.973 ms (stable performance)
-   - Throughput: 2,526 msg/sec sustained
-
-2. **UDP Compatibility Validated**
-   - Max message size: 218 bytes
-   - UDP limit: 65,507 bytes
-   - **99.7% safety margin** - No fragmentation concerns
-
-3. **Architecture Mapped**
-   - 8 critical modification points identified in Ryu
-   - OVS modification scope defined (Phase 4)
-   - Selective reliability strategy designed
-
-4. **Instrumentation Complete**
-   - Tracks 9 OpenFlow message types
-   - Measures latency, throughput, sizes
-   - Automated visualization pipeline
-
-### 🎯 Ready for Phase 3
-
-**Next Steps**: UDP Implementation in Ryu Controller
-- Replace StreamServer with DatagramServer
-- Add UDP socket handling
-- Implement message framing
-- Add sequence number tracking
-
-**Timeline**: Weeks 3-4 (2 weeks)
-
----
-
-## Performance Baseline Summary
-
-| Metric | Value | Notes |
-|--------|-------|-------|
-| **Test Duration** | 37.38 sec | Automated traffic generation |
-| **Total Events** | 94,423 | Packet-In messages |
-| **Throughput** | 2,526 msg/sec | Sustained rate |
-| **Mean Latency** | 1.973 ms | Controller processing time |
-| **P95 Latency** | 8.805 ms | 95th percentile |
-| **Max Message Size** | 218 bytes | Well within UDP limit |
-| **Protocol Overhead** | 54 bytes/msg | TCP+IP+Ethernet headers |
-
-**Target UDP Improvements**:
-- Overhead reduction: 54B → 42B (**22% reduction**)
-- Connection time: 3-way handshake → 0 (**eliminated**)
-- Latency improvement: ~10-15% expected (no TCP retransmissions)
 
 ---
 
@@ -413,32 +363,6 @@ pip install numpy matplotlib seaborn
 
 ---
 
-## Project Timeline
-
-| Phase | Description | Duration | Status |
-|-------|-------------|----------|--------|
-| **Phase 1** | Environment Setup & TCP Baseline | Week 1-2 | ✅ Complete |
-| **Phase 2** | Code Analysis & Architecture | Week 2 | ✅ Complete |
-| **Phase 3** | UDP Implementation (Ryu) | Week 3-4 | 🔜 Next |
-| **Phase 4** | UDP Implementation (OVS) | Week 5-7 | ⏳ Pending |
-| **Phase 5** | Reliability Mechanisms | Week 8 | ⏳ Pending |
-| **Phase 6** | Testing & Validation | Week 9-10 | ⏳ Pending |
-| **Phase 7** | Documentation & Presentation | Week 11 | ⏳ Pending |
-
-**Current Date**: November 1, 2025  
-**Phase 1-2 Completion**: ✅ Verified and validated  
-**Ready for**: Phase 3 UDP implementation
-
----
-
-## Team & Contact
-
-**Institution**: Indian Institute of Technology Gandhinagar  
-**Course**: Computer Networks  
-**Team Size**: 4 members  
-**Project Type**: Research & Implementation
-
----
 
 ## References
 
@@ -449,11 +373,6 @@ pip install numpy matplotlib seaborn
 
 ---
 
-## License
-
-Educational project for IIT Gandhinagar coursework.
-
----
-
 **Last Updated**: November 1, 2025  
-**Status**: Phase 1-2 Complete, Ready for Phase 3
+**Status**: Phase 1-2 Complete
+
